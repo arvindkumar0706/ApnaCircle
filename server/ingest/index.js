@@ -66,56 +66,71 @@ const syncUserDeletion = inngest.createFunction(
 //Inngest Function to send Connection Request
 
 const sendConnectionRequestReminder = inngest.createFunction(
-  { id: 'send-new-connection-request-reminder' },
-  { event: 'app/connection-request' },
+  {
+    id: 'send-new-connection-request-reminder',
+    triggers: [{ event: 'app/connection-request' }],
+  },
   async ({ event, step }) => {
     const { connectionId } = event.data;
 
-    await step.run('send-connection-request-mail', async () => {
-      const connection = await Connection.findById(connectionId).populate('from_user_id to_user_id')
-      const subject = `New Connection Request`;
-      const body = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;"> 
-        <h2>Hi ${connection.to_user_id.full_name},</h2>
-        <p>You have a new connection request from ${connection.from_user_id.full_name}@${connection.from_user_id.username}</p>
-        <p>Click <a href="${process.env.FRONTEND_URL}/connections" style="color: #10b981;" ;">here</a> to accept or reject the request</p>
-        <br/>
-        <p>Thanks,<br/>ApnaCircle- Stay Connected</p> 
-      </div>`
+    const getConnection = async () => {
+      const connection = await Connection.findById(connectionId)
+        .populate('from_user_id to_user_id');
 
-      await sendEmail({
-        to: connection.to_user_id.email,
-        subject,
-        body
-      })
-    })
-
-    const in24hours = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    await step.sleepUntil("wait-for-24-hours", in24hours);
-    await step.run('send-connection-request-reminder', async () => {
-      const connection = await Connection.findById(connectionId).populate('from_user_id to_user_id')
-      if (connection.status === 'accepted') {
-        return { message: "Already Accepted" }
+      if (!connection) {
+        throw new Error("Connection not found");
       }
+
+      return connection;
+    };
+
+    const sendConnectionEmail = async (connection) => {
       const subject = `New Connection Request`;
+
       const body = `
       <div style="font-family: Arial, sans-serif; padding: 20px;"> 
         <h2>Hi ${connection.to_user_id.full_name},</h2>
-        <p>You have a new connection request from ${connection.from_user_id.full_name}@${connection.from_user_id.username}</p>
-        <p>Click <a href="${process.env.FRONTEND_URL}/connections" style="color: #10b981;" ;">here</a> to accept or reject the request</p>
+        <p>You have a new connection request from 
+        ${connection.from_user_id.full_name}@${connection.from_user_id.username}</p>
+        <p>
+          Click <a href="${process.env.FRONTEND_URL}/connections" style="color: #10b981;">
+          here</a> to accept or reject the request
+        </p>
         <br/>
-        <p>Thanks,<br/>ApnaCircle- Stay Connected</p> 
-      </div>`
+        <p>Thanks,<br/>ApnaCircle - Stay Connected</p> 
+      </div>`;
 
       await sendEmail({
         to: connection.to_user_id.email,
         subject,
-        body
-      })
-      return {message:'Reminder Sent'}
-    })
+        body,
+      });
+    };
+
+    // ✅ First Email
+    await step.run('send-initial-email', async () => {
+      const connection = await getConnection();
+      await sendConnectionEmail(connection);
+    });
+
+    // ⏳ Wait 24 hours
+    const in24hours = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await step.sleepUntil("wait-for-24-hours", in24hours);
+
+    // 🔁 Reminder Email
+    await step.run('send-reminder-email', async () => {
+      const connection = await getConnection();
+
+      if (connection.status !== 'pending') {
+        return { message: "No reminder needed" };
+      }
+
+      await sendConnectionEmail(connection);
+
+      return { message: "Reminder Sent" };
+    });
   }
-)
+);
 
 export const functions = [
   syncUserCreation,
