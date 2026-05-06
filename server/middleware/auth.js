@@ -1,11 +1,21 @@
-export const protect = async (req,res,next)=>{
+export const protect = async (req, res, next) => {
     try {
-        const {userId} = await req.auth();
-        if (!userId){
-            return res.json({success:false,message:'not authenticated'})
+        const auth = req.auth();
+
+        if (!auth || !auth.userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
         }
-        next()
+
+        req.userId = auth.userId;
+
+        next();
     } catch (error) {
-        res.json({success:false,message:error.message})
+        return res.status(401).json({
+            success: false,
+            message: error.message
+        });
     }
-}
+};
