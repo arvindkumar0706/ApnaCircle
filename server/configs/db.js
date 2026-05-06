@@ -1,12 +1,23 @@
 import mongoose from "mongoose";
 
-const connectDB = async() =>{
-    try{
-        mongoose.connection.on('connected',()=>console.log('Database Connected'))
-        await mongoose.connect(`${process.env.MONGODB_URL}/ApnaCircle`)
-    }catch(error){
-        console.log(error.message)
-    }
-}
+let isConnected = false;
 
-export default connectDB
+const connectDB = async () => {
+  if (isConnected) return;
+
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URL, {
+      dbName: "ApnaCircle",
+    });
+
+    isConnected = true;
+    console.log("Database Connected");
+
+    return conn;
+  } catch (error) {
+    console.log(error.message);
+    throw error;
+  }
+};
+
+export default connectDB;

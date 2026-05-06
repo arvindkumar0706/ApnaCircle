@@ -1,19 +1,28 @@
 import { serve } from "inngest/express";
+import { inngest, functions } from "../ingest/index.js";
 import connectDB from "../configs/db.js";
-import { inngest,functions } from "../ingest/index.js";
 
+let isConnected = false;
 
 export default async function handler(req, res) {
-    try {
-        await connectDB();
-
-        return serve({
-            client: inngest,
-            functions,
-        })(req, res);
-
-    } catch (error) {
-        console.error("INNGEST ERROR:", error);
-        res.status(500).send("Internal Server Error");
+  try {
+    // Ensure DB connects only once
+    if (!isConnected) {
+      await connectDB();
+      isConnected = true;
+      console.log("DB connected in Vercel function");
     }
+
+    return serve({
+      client: inngest,
+      functions,
+    })(req, res);
+
+  } catch (error) {
+    console.error("Inngest Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 }
