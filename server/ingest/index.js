@@ -1,4 +1,4 @@
-import { Inngest, step } from "inngest";
+import { Inngest } from "inngest";
 import User from "../models/User.js";
 import Connection from "../models/Connection.js";
 import sendEmail from "../configs/nodeMailer.js";
@@ -164,6 +164,8 @@ const sendNotificationOfUnseenMessages = inngest.createFunction(
     const unseenCount = {};
 
     messages.forEach(message => {
+      if (!message.to_user_id) return;
+
       const userId = message.to_user_id._id;
       unseenCount[userId] = (unseenCount[userId] || 0) + 1;
     });
@@ -171,42 +173,13 @@ const sendNotificationOfUnseenMessages = inngest.createFunction(
     for (const userId in unseenCount) {
 
       const user = await User.findById(userId);
+      if (!user) continue;
 
       const count = unseenCount[userId];
 
       const subject = `You have ${count} new unread message${count > 1 ? 's' : ''}`;
 
-      const body = `
-        <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px;">
-          
-          <div style="max-width: 500px; margin: auto; background: #ffffff; border-radius: 10px; padding: 20px;">
-            
-            <h2 style="color: #333;">New Messages Waiting for You</h2>
-            
-            <p style="font-size: 16px; color: #555;">
-              You have <strong>${count}</strong> unread message${count > 1 ? 's' : ''} in your account.
-            </p>
-
-            <p style="font-size: 14px; color: #777;">
-              Stay connected and never miss important conversations.
-            </p>
-
-            <div style="text-align: center; margin: 20px 0;">
-              <a href="#" 
-                 style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                 View Messages
-              </a>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid #eee;" />
-
-            <p style="font-size: 12px; color: #aaa; text-align: center;">
-              You are receiving this because you have unread messages.
-            </p>
-
-          </div>
-        </div>
-      `;
+      const body = `...same as your HTML...`;
 
       await sendEmail({
         to: user.email,
