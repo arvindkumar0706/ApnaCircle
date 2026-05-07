@@ -1,23 +1,34 @@
+// server/configs/multer.js
+
 import multer from "multer";
-import fs from "fs";
 
-const uploadPath = "uploads/";
+// ✅ Use memory storage for Vercel
+const storage = multer.memoryStorage();
 
-// ✅ Create folder automatically if not exists
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath);
-}
+// ✅ File filter (optional)
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = [
+    "image/png",
+    "image/jpg",
+    "image/jpeg",
+    "video/mp4",
+    "video/mov",
+    "video/webm",
+    "application/pdf",
+  ];
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Unsupported file type"), false);
+  }
+};
 
+// ✅ Multer upload config
 export const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB
+  },
 });
