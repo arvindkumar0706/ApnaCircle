@@ -36,11 +36,11 @@ const StoryViewer = ({ viewStory, setViewStory }) => {
         switch (viewStory.media_type) {
             case 'image':
                 return (
-                    <img src={viewStory.media_url} className='max-w-full max-h-screen object-contain' alt="" />
+                    <img src={viewStory.media} className='max-w-full max-h-screen object-contain' alt="" />
                 );
             case 'video':
                 return (
-                    <video src={viewStory.media_url} className='max-h-screen' onEnded={()=>setViewStory(null)} controls autoPlay />
+                    <video src={viewStory.media} className='max-h-screen' onEnded={()=>setViewStory(null)} controls autoPlay />
                 );
             case 'text':
                 return (
@@ -56,19 +56,19 @@ const StoryViewer = ({ viewStory, setViewStory }) => {
 
     return (
 
-        <div className='fixed inset-0 h-screen bg-black bg-opacity-90 z-110 flex items-center justify-center' style={{ backgroundColor: viewStory.media_type === 'text' ? viewStory.background_color : '#000000' }}>
+        <div className='fixed inset-0 h-screen bg-black bg-opacity-90 z-110 flex items-center justify-center' style={{ background: viewStory.media_type === 'text' ? viewStory.background_color : 'rgba(15,15,15,0.92)',backdropFilter: 'blur(20px) '}}>
             <div className='absolute top-0 left-0 w-full h-1 bg-gray-700'>
                 <div className='h-full bg-white transition-all duration-100 linear' style={{ width: `${progress}%`}}>
 
                 </div>
 
             </div>
-            <div className='absolute top-4 left-4 flex items-center space-x-3 p-2 px-4 sm:p-4 sm:px-8 backdrop-blur-2xl rounded bg-black/50'>
+            <div className='absolute top-4 left-4 flex items-center space-x-3 p-2 px-4 sm:p-4 sm:px-8 backdrop-blur-7xl rounded'>
 
-                <img src={viewStory.user?.profile_picture} alt="" className='size-7 sm:size-8 rounded-full object-cover border border-white' />
+                <img src={viewStory.user?.profile_picture} alt="" className='size-7 lg:size-12 rounded-full object-cover border border-white' />
                 <div className='text-white font-medium flex items-center gap-1.5'>
-                    <span>{viewStory.user?.full_name}</span>
-                    <BadgeCheck size={18} />
+                    <span className='text-3xl'>{viewStory.user?.full_name}</span>
+                    <BadgeCheck className='ml-2' size={35} color='blue' />
                 </div>
 
             </div>

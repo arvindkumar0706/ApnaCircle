@@ -5,85 +5,120 @@ import User from '../models/User.js';
 
 // Add Post
 export const addPost = async (req, res) => {
+
     try {
+
         const userId = req.userId;
+
         const { content, post_type } = req.body;
+
         const files = req.files || [];
 
         let media = [];
 
+        // Upload media files
         if (files.length > 0) {
+
             media = await Promise.all(
+
                 files.map(async (file) => {
-                    try {
-                        // upload using stream (important for image + video)
-                        const response = await imagekit.files.upload({
-                            file: fs.createReadStream(file.path),
-                            fileName: file.originalname,
-                            folder: 'posts'
+
+                    // Upload file to ImageKit using buffer
+                    const response = await imagekit.files.upload({
+
+                        file: file.buffer.toString("base64"),
+
+                        fileName: `${Date.now()}-${file.originalname}`,
+
+                        folder: "posts"
+
+                    });
+
+                    const isVideo =
+                        file.mimetype.startsWith("video");
+
+                    let fileUrl;
+
+                    // Video URL
+                    if (isVideo) {
+
+                        fileUrl =
+                            `${process.env.IMAGEKIT_URL_ENDPOINT}/${response.filePath}`;
+
+                    } else {
+
+                        // Optimized image URL
+                        fileUrl = imagekit.helper.buildSrc({
+
+                            urlEndpoint:
+                                process.env.IMAGEKIT_URL_ENDPOINT,
+
+                            src: response.filePath,
+
+                            transformation: [
+                                {
+                                    width: 1280,
+                                    quality: "auto",
+                                    format: "webp"
+                                }
+                            ]
+
                         });
-
-                        const isVideo = file.mimetype.startsWith('video');
-
-                        let fileUrl;
-
-                        if (isVideo) {
-                            fileUrl = `${process.env.IMAGEKIT_URL_ENDPOINT}/${response.filePath}`;
-                        } else {
-                            fileUrl = imagekit.helper.buildSrc({
-                                urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-                                src: response.filePath,
-                                transformation: [
-                                    {
-                                        width: 1280,
-                                        quality: "auto",
-                                        format: "webp",
-                                    },
-                                ],
-                            });
-                        }
-
-                        // delete local file after upload
-                        if (fs.existsSync(file.path)) {
-                            await fs.promises.unlink(file.path);
-                        }
-
-                        return {
-                            url: fileUrl,
-                            type: isVideo ? 'video' : 'image'
-                        };
-
-                    } catch (err) {
-                        // cleanup on failure
-                        if (fs.existsSync(file.path)) {
-                            await fs.promises.unlink(file.path);
-                        }
-                        throw err;
                     }
+
+                    return {
+                        url: fileUrl,
+                        type: isVideo
+                            ? "video"
+                            : "image"
+                    };
+
                 })
+
             );
+
         }
 
+        // Create post
         const newPost = await Post.create({
+
             user: userId,
+
             content,
+
             media,
+
             post_type
+
         });
 
+        // Populate user
+        await newPost.populate("user");
+
         res.status(201).json({
+
             success: true,
-            message: 'Post created successfully',
+
+            message: "Post created successfully",
+
             post: newPost
+
         });
 
     } catch (error) {
+
         console.log(error);
+
         res.status(500).json({
+
             success: false,
+
             message: error.message
+
         });
+
     }
+
 };
 
 

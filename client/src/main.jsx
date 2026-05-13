@@ -3,6 +3,8 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import { ClerkProvider } from '@clerk/react'
+import { Provider } from "react-redux";
+import { store } from './app/store.js'
 
 
 
@@ -11,7 +13,9 @@ import { ClerkProvider } from '@clerk/react'
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <ClerkProvider>
-      <App />
+      <Provider store={store}>
+        <App />
+      </Provider>
     </ClerkProvider>
   </BrowserRouter>,
 )

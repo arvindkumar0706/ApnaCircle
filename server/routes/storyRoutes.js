@@ -5,7 +5,12 @@ import { addUserStory, getUserStory } from '../controllers/storyController.js';
 
 const storyRouter = express.Router()
 
-storyRouter.post('/create',upload.single('media'),protect,addUserStory)
+storyRouter.post(
+    '/create',
+    protect,
+    upload.single('media'),
+    addUserStory
+)
 storyRouter.get('/get',protect,getUserStory)
 
 export default storyRouter

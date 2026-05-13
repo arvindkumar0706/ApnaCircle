@@ -1,9 +1,15 @@
 import React, { useState } from 'react'
 import { dummyUserData } from '../assets/assets'
 import { Pencil } from 'lucide-react'
+import { useAuth } from "@clerk/react";
+import { useDispatch, useSelector } from 'react-redux'
+import { updateUser } from '../features/user/userSlice'
+import toast from 'react-hot-toast';
 
-const ProfileModel = ({setShowEdit}) => {
-    const user = dummyUserData
+const ProfileModel = ({ setShowEdit }) => {
+    const user = useSelector((state) => state.user.value)
+    const dispatch = useDispatch()
+    const { getToken } = useAuth()
     const [editForm, setEditForm] = useState({
         username: user.username,
         bio: user.bio,
@@ -13,7 +19,47 @@ const ProfileModel = ({setShowEdit}) => {
         full_name: user.full_name,
     })
     const handleSaveProfile = async (e) => {
+
         e.preventDefault();
+
+        try {
+
+            const userData = new FormData();
+
+            const {
+                full_name,
+                username,
+                bio,
+                location,
+                profile_picture,
+                cover_photo
+            } = editForm;
+
+            userData.append('username', username);
+            userData.append('bio', bio);
+            userData.append('location', location);
+            userData.append('full_name', full_name);
+
+            if (profile_picture) {
+                userData.append('profile', profile_picture);
+            }
+
+            if (cover_photo) {
+                userData.append('cover', cover_photo);
+            }
+
+            const token = await getToken();
+
+            await dispatch(updateUser({ userData, token }));
+
+            setShowEdit(false);
+
+        } catch (error) {
+
+            console.log(error);
+
+            toast.error(error.message);
+        }
     }
     return (
 
@@ -21,7 +67,11 @@ const ProfileModel = ({setShowEdit}) => {
             <div className='max-w-2xl sm:py-6 mx-auto'>
                 <div className='bg-white rounded-lg shadow p-6'>
                     <h1 className='text-2xl font-bold text-gray-900 mb-6'>Edit Profile</h1>
-                    <form action="" className='space-y-4' onSubmit={handleSaveProfile} >
+                    <form action="" className='space-y-4' onSubmit={e => {
+                        toast.promise(
+                            handleSaveProfile(e), { loading: 'Saving.....', success: 'Profile Updated', error: 'Update Failed' }
+                        )
+                    }} >
                         <div className='flex flex-col items-start gap-3' >
                             <label htmlFor="profile_picture" className='block text-sm font-medium text-gray-700 mb-1'>
                                 Profile Picture
@@ -50,28 +100,39 @@ const ProfileModel = ({setShowEdit}) => {
                             <label className='block text-sm font-medium text-gray-700 mb-1'>
                                 Full Name
                             </label>
-                            <input type="text" className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter Your Full Name ....' onChange={(e)=>setEditForm({...editForm,full_name:e.target.value})} value={editForm.full_name} />
+                            <input type="text" className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter Your Full Name ....' onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} value={editForm.full_name} />
                         </div>
                         <div>
                             <label className='block text-sm font-medium text-gray-700 mb-1'>
                                 Username
                             </label>
-                            <input type="text" className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter a Username ....' onChange={(e)=>setEditForm({...editForm,username:e.target.value})} value={`@${editForm.username}`} />
+                            <input
+                                type="text"
+                                className='w-full p-3 border border-gray-200 rounded-lg'
+                                placeholder='Enter a Username ....'
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        username: e.target.value.replace('@', '')
+                                    })
+                                }
+                                value={editForm.username}
+                            />
                         </div>
                         <div>
                             <label className='block text-sm font-medium text-gray-700 mb-1'>
-                               Bio
+                                Bio
                             </label>
-                            <textarea rows={4} className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter the Bio ....' onChange={(e)=>setEditForm({...editForm,bio:e.target.value})} value={editForm.bio} />
+                            <textarea rows={4} className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter the Bio ....' onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })} value={editForm.bio} />
                         </div>
                         <div>
                             <label className='block text-sm font-medium text-gray-700 mb-1'>
                                 Location
                             </label>
-                            <input type="text" className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter Your Location ....' onChange={(e)=>setEditForm({...editForm,location:e.target.value})} value={editForm.location} />
+                            <input type="text" className='w-full p-3 border border-gray-200 rounded-lg' placeholder='Enter Your Location ....' onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} value={editForm.location} />
                         </div>
                         <div className='flex justify-end space-x-3 pt-6' >
-                            <button onClick={()=>setShowEdit(false)} type='button' className='cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors'>Cancel</button>
+                            <button onClick={() => setShowEdit(false)} type='button' className='cursor-pointer px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors'>Cancel</button>
                             <button type='Submit' className='px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition cursor-pointer'>Save Changes</button>
 
                         </div>

@@ -2,15 +2,11 @@ import React from 'react'
 import { dummyUsers } from '../assets/assets'
 import { Eye, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 
 const Messages = () => {
 
-  const currentUser = dummyUsers[0]
-
-  // 🔥 Map friend IDs to full user data
-  const friendsData = currentUser.friends.map(id =>
-    dummyUsers.find(user => user._id === id)
-  )
+  const {connections} = useSelector((state)=>state.connections)
 
   const navigate = useNavigate()
   return (
@@ -28,7 +24,7 @@ const Messages = () => {
 
           <div className='flex flex-col gap-3'>
 
-            {friendsData.map((user) => (
+            {connections.map((user) => (
               <div key={user._id} className='max-w-xl flex gap-5 p-6 bg-white shadow rounded-md'>
 
                 <img

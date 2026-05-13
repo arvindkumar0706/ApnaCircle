@@ -3,10 +3,11 @@ import moment from 'moment'
 import React, { useState } from 'react'
 import { dummyUsers } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 
 const PostCard1 = ({ post }) => {
 
-    // ✅ CONTENT FIX
+    // CONTENT FIX
     const caption = typeof post?.content === 'string' ? post.content : ''
 
     const postWithHashtags = (caption || '').replace(
@@ -14,13 +15,14 @@ const PostCard1 = ({ post }) => {
         '<span class="text-indigo-600">$1</span>'
     )
 
-    // ✅ LIKES SAFE
+    // LIKES SAFE
     const [likes, setLikes] = useState(post?.likes || [])
 
-    const currentUser = dummyUsers[0]
+    const currentUser = useSelector((state)=>state.user.value)
+    
     const [currentIndex, setCurrentIndex] = useState(0)
 
-    // ✅ FIX: SUPPORT BOTH media_url & image_urls
+    //media_url & image_urls
     const mediaList =
         Array.isArray(post?.media_url)
             ? post.media_url

@@ -4,12 +4,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import MenuItems from './MenuItems'
 import { CirclePlus, LogOut } from 'lucide-react'
 import {UserButton,useClerk,useUser} from '@clerk/react'
+import { useSelector } from 'react-redux'
 
 
 const Sidebar = ({ SidebarOpen, setSidebarOpen }) => {
 
   const navigate = useNavigate()
-  const user = useUser()
+  const user = useSelector((state)=>state.user.value)
+
   const {signOut} = useClerk()
   return (
     <div className={`w-60 xl:w-72 bg-white border-r border-green-200 flex flex-col justify-between items-center max-sm:absolute top-0 bottom-0 z-20 ${SidebarOpen ? 'translate-x-0' : 'max:sm:-translate-x-full'} transition-all duration-300 ease-in-out`}>
@@ -28,8 +30,8 @@ const Sidebar = ({ SidebarOpen, setSidebarOpen }) => {
         <div className='flex gap-2 items-center cursor-pointer'>
           <UserButton/>
           <div>
-            <h3 className='text-xs font-medium'>{user.user.fullName}</h3>
-            <p className='text-xs text-gray-500'>@{user.user.firstName}</p>
+            <h3 className='text-xs font-medium'>{user?.full_name}</h3>
+            <p className='text-xs text-gray-500'>@{user?.username}</p>
           </div>
         </div>
         <LogOut className=' w-4.5 text-gray-400 hover:text-gray-700 transition cursor-pointer' onClick={signOut}/>

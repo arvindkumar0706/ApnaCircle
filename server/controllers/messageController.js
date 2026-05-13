@@ -1,145 +1,194 @@
-import fs from 'fs';
-import imagekit from '../configs/imagekit.js';
-import Message from '../models/Message.js';
+import imagekit from "../configs/imagekit.js"
+import Message from "../models/Message.js"
 
-const connections = {};
+const connections = {}
 
-// SSE Controller
+// SSE connection
+
 export const sseController = (req, res) => {
-    const { userId } = req.params;
 
-    console.log('New client connected:', userId);
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    connections[userId] = res;
-
-    res.write('event: connected\ndata: Connected to SSE\n\n');
-
-    req.on('close', () => {
-        delete connections[userId];
-        console.log('Client disconnected:', userId);
-    });
-};
-
-
-// Send Message
-export const sendMessage = async (req, res) => {
     try {
-        const userId = req.userId;
-        const { to_user_id, text } = req.body;
-        const file = req.file;
 
-        let media_url = '';
-        let message_type = 'text';
+        const { userId } = req.params
+
+        res.setHeader("Content-Type", "text/event-stream")
+        res.setHeader("Cache-Control", "no-cache")
+        res.setHeader("Connection", "keep-alive")
+        res.setHeader("Access-Control-Allow-Origin", "*")
+
+        connections[userId] = res
+
+        res.write(`event: connected\ndata: connected\n\n`)
+
+        req.on("close", () => {
+
+            delete connections[userId]
+        })
+
+    } catch (error) {
+
+        console.log(error)
+    }
+}
+
+
+// Send message
+
+export const sendMessage = async (req, res) => {
+
+    try {
+
+        const userId = req.userId
+
+        const { to_user_id, text } = req.body
+
+        const file = req.file
+
+        let media_url = ""
+
+        let message_type = "text"
 
         if (file) {
-            const isVideo = file.mimetype.startsWith('video');
-            message_type = isVideo ? 'video' : 'image';
+
+            if (file.mimetype.startsWith("image")) {
+
+                message_type = "image"
+
+            } else if (file.mimetype.startsWith("video")) {
+
+                message_type = "video"
+
+            } else {
+
+                message_type = "document"
+            }
 
             const response = await imagekit.files.upload({
-                file: fs.createReadStream(file.path),
+
+                file: file.buffer.toString("base64"),
+
                 fileName: file.originalname,
-                folder: 'messages'
-            });
 
-            if (isVideo) {
-                media_url = `${process.env.IMAGEKIT_URL_ENDPOINT}/${response.filePath}`;
-            } else {
-                media_url = imagekit.helper.buildSrc({
-                    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-                    src: response.filePath,
-                    transformation: [
-                        { width: 1280 },
-                        { quality: "auto" },
-                        { format: "webp" }
-                    ]
-                });
-            }
+                folder: "/messages"
+            })
 
-            // delete temp file
-            if (fs.existsSync(file.path)) {
-                await fs.promises.unlink(file.path);
-            }
+            media_url = response.url
         }
 
         const message = await Message.create({
+
             from_user_id: userId,
+
             to_user_id,
+
             text,
+
             message_type,
+
             media_url
-        });
+        })
 
-        res.json({ success: true, message });
-
-        // populate sender data
         const messageWithUser = await Message.findById(message._id)
-            .populate('from_user_id');
+            .populate("from_user_id")
 
-        // send via SSE if receiver connected
         if (connections[to_user_id]) {
+
             connections[to_user_id].write(
                 `data: ${JSON.stringify(messageWithUser)}\n\n`
-            );
+            )
         }
 
+        res.status(200).json({
+
+            success: true,
+
+            message: messageWithUser
+        })
+
     } catch (error) {
-        console.log(error);
+
+        console.log(error)
+
         res.status(500).json({
+
             success: false,
+
             message: error.message
-        });
+        })
     }
-};
+}
 
 
-// Get Chat Messages
+// Get chat messages
 
-export const getChatMessages = async (res,req)=>{
+export const getChatMessages = async (req, res) => {
+
     try {
 
-        const {userId} = req.auth();
-        const {to_user_id} = req.body()
+        const userId = req.userId
+
+        const { userId: to_user_id } = req.params
 
         const messages = await Message.find({
-            $or:[
-                {from_user_id:userId,to_user_id},
-                {from_user_id:to_user_id,to_user_id:userId},
+
+            $or: [
+
+                {
+                    from_user_id: userId,
+                    to_user_id
+                },
+
+                {
+                    from_user_id: to_user_id,
+                    to_user_id: userId
+                }
             ]
-        }).sort({created_at:-1})
+        }).sort({ createdAt: 1 })
 
-        await Message.updateMany({from_user_id:to_user_id,to_user_id:userId},{seen:true})
+        await Message.updateMany(
 
-        res.json({success:true,messages});
-        
+            {
+                from_user_id: to_user_id,
+                to_user_id: userId
+            },
+
+            {
+                seen: true
+            }
+        )
+
+        res.status(200).json({
+
+            success: true,
+
+            messages
+        })
+
     } catch (error) {
-        console.log(error);
+
+        console.log(error)
+
         res.status(500).json({
+
             success: false,
+
             message: error.message
-        });
+        })
     }
 }
 
+// Get recent chats
 
-export const getRecentChatMessages = async (res,req)=>{
+export const getRecentChatMessages = async (req, res) => {
+
     try {
 
-        const {userId} = req.auth();
-        const messages = await Message.find({to_user_id:userId}.populate('from_user_id to_user_id')).sort({created_at:-1});
+        const {userId} = req.auth()
+        const messages = await Message.find({to_user_id:userId}).populate('from_user_id to_user_id').sort({created_at:-1});
 
-        res.status(500).json({success: true,messages});
-        
+        res.json({success:true,messages})
     } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        res.json({success:true,messages})
+
     }
 }
-
